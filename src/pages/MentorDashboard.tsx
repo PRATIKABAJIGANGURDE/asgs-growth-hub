@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import { MOCK_MEMBERS, MOCK_PROJECTS } from "@/data/mockData";
 import { useAuth } from "@/contexts/AuthContext";
@@ -17,10 +17,12 @@ const statusIcon = (status: string) => {
 };
 
 export default function MentorDashboard() {
-  const { pendingRequests, approveRequest, rejectRequest, addMember } = useAuth();
+  const { pendingRequests, approveRequest, rejectRequest, addMember, loadPendingRequests } = useAuth();
   const activeMembers = MOCK_MEMBERS.filter(m => m.status === "active");
   const inactiveMembers = MOCK_MEMBERS.filter(m => m.streak === 0 || m.attendance < 60);
   const stalledProjects = MOCK_PROJECTS.filter(p => p.status === "stalled");
+
+  useEffect(() => { loadPendingRequests(); }, []);
 
   // Add Member modal state
   const [showAddMember, setShowAddMember] = useState(false);
@@ -32,20 +34,18 @@ export default function MentorDashboard() {
   const [addSuccess, setAddSuccess] = useState(false);
   const [addLoading, setAddLoading] = useState(false);
 
-  const handleAddMember = (e: React.FormEvent) => {
+  const handleAddMember = async (e: React.FormEvent) => {
     e.preventDefault();
     setAddError("");
     setAddLoading(true);
-    setTimeout(() => {
-      const result = addMember(addName, addEmail, addPassword);
-      if (result.success) {
-        setAddSuccess(true);
-        setAddName(""); setAddEmail(""); setAddPassword("");
-      } else {
-        setAddError(result.error || "Failed to add member.");
-      }
-      setAddLoading(false);
-    }, 500);
+    const result = await addMember(addName, addEmail, addPassword);
+    if (result.success) {
+      setAddSuccess(true);
+      setAddName(""); setAddEmail(""); setAddPassword("");
+    } else {
+      setAddError(result.error || "Failed to add member.");
+    }
+    setAddLoading(false);
   };
 
   const closeAddModal = () => {
@@ -108,7 +108,7 @@ export default function MentorDashboard() {
                   <p className="text-[10px] text-muted-foreground font-mono">Requested at {req.requestedAt}</p>
                   <div className="flex gap-2">
                     <button
-                      onClick={() => approveRequest(req.id)}
+                      onClick={() => approveRequest(req.id, req.name, req.email)}
                       className="flex items-center gap-1.5 bg-signal-green/10 border border-signal-green/30 text-signal-green text-xs font-medium px-3 py-1.5 rounded-lg hover:bg-signal-green/20 transition-colors"
                     >
                       <Check size={12} />

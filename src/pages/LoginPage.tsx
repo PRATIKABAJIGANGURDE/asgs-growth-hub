@@ -34,34 +34,30 @@ export default function LoginPage() {
     e.preventDefault();
     setError("");
     setLoading(true);
-    setTimeout(() => {
-      const result = login(email, password);
-      if (result.success) {
-        if (email.includes("mentor")) {
-          navigate("/mentor");
-        } else {
-          navigate("/dashboard");
-        }
+    const result = await login(email, password);
+    if (result.success) {
+      if (email.includes("mentor")) {
+        navigate("/mentor");
       } else {
-        setError(result.error || "Login failed");
+        navigate("/dashboard");
       }
-      setLoading(false);
-    }, 600);
+    } else {
+      setError(result.error || "Login failed");
+    }
+    setLoading(false);
   };
 
   const handleRequestAccess = async (e: React.FormEvent) => {
     e.preventDefault();
     setReqError("");
     setReqLoading(true);
-    setTimeout(() => {
-      const result = requestAccess(reqName, reqEmail, reqPassword);
-      if (result.success) {
-        setReqSuccess(true);
-      } else {
-        setReqError(result.error || "Request failed");
-      }
-      setReqLoading(false);
-    }, 600);
+    const result = await requestAccess(reqName, reqEmail, reqPassword);
+    if (result.success) {
+      setReqSuccess(true);
+    } else {
+      setReqError(result.error || "Request failed");
+    }
+    setReqLoading(false);
   };
 
   return (
@@ -232,9 +228,9 @@ export default function LoginPage() {
             <div className="mt-8 p-4 bg-muted/50 border border-border rounded-lg space-y-2">
               <p className="text-xs font-mono text-muted-foreground uppercase tracking-wide">Demo Credentials</p>
               <div className="space-y-1 text-xs text-muted-foreground font-mono">
-                <p><span className="text-cyan">Member:</span> rahul.sharma@atharvacoe.ac.in / demo123</p>
                 <p><span className="text-amber">Mentor:</span> mentor@atharvacoe.ac.in / mentor123</p>
               </div>
+              <p className="text-[10px] text-muted-foreground">Members: use Request Access tab to join.</p>
             </div>
           </>
         )}

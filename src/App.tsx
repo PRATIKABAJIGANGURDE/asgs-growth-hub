@@ -15,7 +15,15 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
 function ProtectedRoute({ children, requireRole }: { children: React.ReactNode; requireRole?: "member" | "mentor" }) {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+  if (loading) return (
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="text-center space-y-3">
+        <div className="w-8 h-8 border-2 border-cyan border-t-transparent rounded-full animate-spin mx-auto" />
+        <p className="text-xs font-mono text-muted-foreground">Authenticating...</p>
+      </div>
+    </div>
+  );
   if (!user) return <Navigate to="/" replace />;
   if (requireRole && user.role !== requireRole) {
     return <Navigate to={user.role === "mentor" ? "/mentor" : "/dashboard"} replace />;
@@ -24,7 +32,17 @@ function ProtectedRoute({ children, requireRole }: { children: React.ReactNode; 
 }
 
 function AppRoutes() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+
+  if (loading) return (
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="text-center space-y-3">
+        <div className="w-8 h-8 border-2 border-cyan border-t-transparent rounded-full animate-spin mx-auto" />
+        <p className="text-xs font-mono text-muted-foreground">Loading ASGS Platform...</p>
+      </div>
+    </div>
+  );
+
   return (
     <Routes>
       <Route
