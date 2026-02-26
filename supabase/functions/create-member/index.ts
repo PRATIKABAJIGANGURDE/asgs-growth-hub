@@ -67,7 +67,10 @@ serve(async (req) => {
       });
     }
 
-    // Create the auth user
+    // Try to create the auth user; if they already exist, look them up instead
+    let userId: string;
+    const avatar = name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2);
+
     const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
@@ -75,20 +78,38 @@ serve(async (req) => {
     });
 
     if (createError) {
-      return new Response(JSON.stringify({ error: createError.message }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      if (createError.message.includes("already been registered")) {
+        // User exists — find their id
+        const { data: { users }, error: listErr } = await supabaseAdmin.auth.admin.listUsers();
+        if (listErr) {
+          return new Response(JSON.stringify({ error: listErr.message }), {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        const existing = users.find((u: any) => u.email === email);
+        if (!existing) {
+          return new Response(JSON.stringify({ error: "Could not find existing user." }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        userId = existing.id;
+      } else {
+        return new Response(JSON.stringify({ error: createError.message }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    } else {
+      userId = newUser.user.id;
     }
 
-    const userId = newUser.user.id;
-    const avatar = name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2);
+    // Upsert profile
+    await supabaseAdmin.from("profiles").upsert({ id: userId, name: name.trim(), email, avatar }, { onConflict: "id" });
 
-    // Insert profile
-    await supabaseAdmin.from("profiles").insert({ id: userId, name: name.trim(), email, avatar });
-
-    // Assign member role
-    await supabaseAdmin.from("user_roles").insert({ user_id: userId, role: "member" });
+    // Upsert member role
+    await supabaseAdmin.from("user_roles").upsert({ user_id: userId, role: "member" }, { onConflict: "user_id,role" });
 
     // If from access request, mark it approved
     if (accessRequestId) {
